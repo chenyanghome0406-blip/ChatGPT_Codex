@@ -1,0 +1,24 @@
+{
+  "sheet": 1,
+  "cluster_var": "FirmID",
+  "fe_vars": ["Year"],
+  "winsor": [1, 99],
+  "vars": {
+    "date": "Date",
+    "id": "FirmID",
+    "y": "Y",
+    "x": ["X1", "X2", "X3"],
+    "controls": ["Size", "Leverage"]
+  },
+  "iv": {
+    "enabled": false,
+    "endog_var": "X1",
+    "instrument_var": "Z1",
+    "exog_vars": ["X2", "X3"]
+  },
+  "did": {
+    "enabled": false,
+    "treat_var": "Treat",
+    "post_var": "Post"
+  }
+}
