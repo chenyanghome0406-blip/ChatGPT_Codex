@@ -41,7 +41,15 @@ save(fullfile(outDir, 'step_outputs', 'step1_raw_import.mat'), 'T');
 fprintf('Step1 讀取完成：%d 筆、%d 欄\n', height(T), width(T));
 
 %% 2) Data cleaning + variable construction
-varsNeeded = unique([{cfg.vars.date, cfg.vars.id, cfg.vars.y}, cfg.vars.x, cfg.vars.controls]);
+feVarsNeeded = cfg.fe_vars;
+if cfg.create_year_from_date && ~ismember('Year', T.Properties.VariableNames)
+    feVarsNeeded = setdiff(feVarsNeeded, {'Year'}, 'stable');
+end
+varsNeeded = unique([{cfg.vars.date, cfg.vars.id, cfg.vars.y}, cfg.vars.x, ...
+    cfg.vars.controls, feVarsNeeded]);
+if ~isempty(cfg.cluster_var)
+    varsNeeded = unique([varsNeeded, {cfg.cluster_var}]);
+end
 if cfg.did.enabled
     varsNeeded = unique([varsNeeded, {cfg.did.treat_var, cfg.did.post_var}]);
 end
@@ -309,6 +317,10 @@ if isempty(cluster)
 else
     [~, ~, g] = unique(cluster);
     G = max(g);
+    if G < 2
+        error('ClusterRobust:TooFewClusters', ...
+            'Cluster-robust standard errors require at least two clusters; found %d.', G);
+    end
     S = zeros(k, k);
     for i = 1:G
         idx = (g == i);
@@ -351,8 +363,11 @@ xw = min(max(x, lo), hi);
 end
 
 function out = runIV2SLS(U, cfg, feVars, clusterVar)
+% Exclude the endogenous variable from both stages' ordinary regressor lists.
+otherX = setdiff(cfg.vars.x, {cfg.iv.endog_var}, 'stable');
+
 % stage 1: endog ~ instrument + exog + FE
-x1 = unique([{cfg.iv.instrument_var}, cfg.iv.exog_vars, cfg.vars.controls, cfg.vars.x]);
+x1 = unique([{cfg.iv.instrument_var}, cfg.iv.exog_vars, cfg.vars.controls, otherX]);
 stage1 = runLinearModel(U, cfg.iv.endog_var, x1, feVars, clusterVar);
 
 U2 = U;
@@ -361,7 +376,7 @@ xhat(stage1.keepIdx) = stage1.fittedResid.Fitted;
 U2.([cfg.iv.endog_var, '_hat']) = xhat;
 
 % stage 2: y ~ endog_hat + exog + FE
-x2 = unique([{[cfg.iv.endog_var, '_hat']}, cfg.iv.exog_vars, cfg.vars.controls, cfg.vars.x]);
+x2 = unique([{[cfg.iv.endog_var, '_hat']}, cfg.iv.exog_vars, cfg.vars.controls, otherX]);
 stage2 = runLinearModel(U2, cfg.vars.y, x2, feVars, clusterVar);
 
 out.stage1 = stage1;
