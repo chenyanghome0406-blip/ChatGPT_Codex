@@ -368,6 +368,7 @@ otherX = setdiff(cfg.vars.x, {cfg.iv.endog_var}, 'stable');
 
 % stage 1: endog ~ instrument + exog + FE
 x1 = unique([{cfg.iv.instrument_var}, cfg.iv.exog_vars, cfg.vars.controls, otherX]);
+x1 = setdiff(x1, {cfg.iv.endog_var}, 'stable');
 stage1 = runLinearModel(U, cfg.iv.endog_var, x1, feVars, clusterVar);
 
 U2 = U;
@@ -377,6 +378,7 @@ U2.([cfg.iv.endog_var, '_hat']) = xhat;
 
 % stage 2: y ~ endog_hat + exog + FE
 x2 = unique([{[cfg.iv.endog_var, '_hat']}, cfg.iv.exog_vars, cfg.vars.controls, otherX]);
+x2 = setdiff(x2, {cfg.iv.endog_var}, 'stable');
 stage2 = runLinearModel(U2, cfg.vars.y, x2, feVars, clusterVar);
 
 out.stage1 = stage1;
